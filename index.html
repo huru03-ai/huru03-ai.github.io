@@ -10,6 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@500;700&family=Pixelify+Sans:wght@700&display=swap">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#1a0503; --panel:rgba(32,10,8,.94); --line:#6a2a1e; --ink:#fbefe6; --dim:#c9a99a;
@@ -599,6 +602,9 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 .tpb2{position:relative;display:block;height:11px;border-radius:6px;background:#14100e;border:1px solid #4a3a3a;overflow:hidden}.tpb2 i{display:block;height:100%;background:linear-gradient(90deg,#c9952e,#ffe08a)}
 .tpb2 em{position:absolute;inset:0;font-style:normal;font-size:9px;line-height:10px;text-align:center;color:#fff;text-shadow:0 1px 0 #000}
 @media (prefers-reduced-motion:reduce){.trays,.pmark{animation:none}}
+
+.lin{font-family:var(--fd);font-size:20px;text-align:center;width:100%;background:#200805;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px;-webkit-user-select:text;user-select:text}
+.lsg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.lsg .b{width:100%}.lmsg{font-size:13px!important;color:#ffe08a!important}
 </style>
 </head>
 <body>
@@ -615,6 +621,7 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 <div class="rot"><h1>가로로 돌려주세요</h1><p>이 게임은 폰을 가로로 두고 해요.</p></div>
 <script>
 (()=>{
+var cloudDirty=0;
 var SP=(()=>{try{return sessionStorage.getItem('gs_mode')==='guest'?'gsg_':'gs_'}catch(e){return 'gs_'}})();
 // ===================== 데이터 =====================
 // 초월 각성 (8랩 + 골드) — 모든 효과는 나올 때 한 번만 보내서 렉 없음
@@ -715,7 +722,7 @@ const $=id=>document.getElementById(id);
 const cv=$('cv'),ctx=cv.getContext('2d'),ov=$('ov');
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function load(k,d){try{const v=JSON.parse(localStorage.getItem(SP+k));return v??d}catch(e){return d}}
-function save(k,v){try{localStorage.setItem(SP+k,JSON.stringify(v))}catch(e){}}
+function save(k,v){try{localStorage.setItem(SP+k,JSON.stringify(v))}catch(e){}if(k!=='cuid')cloudDirty=1}
 for(let i=0;i<46;i++)S.embers.push({x:Math.random()*W,y:Math.random()*H,v:12+Math.random()*34,r:Math.random()*2.2+.6,ph:Math.random()*6});
 
 // ===================== 플레이어 상태 머신 =====================
@@ -1039,9 +1046,9 @@ let fxq=load('fxq','auto'),netv=load('netv',false);
 function applyLite(on){S.lite=!!on;try{if(on)Object.defineProperty(ctx,'shadowBlur',{configurable:true,get(){return 0},set(){}});else delete ctx.shadowBlur}catch(e){}}
 function openSettings(){const opt=[['auto','자동','폰 속도에 맞춰 알아서'],['high','화려하게','빛 효과 모두 켜기'],['lite','가볍게','버벅일 때 추천']];
   modal(`<div class="mbox"><h2>설정</h2><p class="lab">효과 품질</p><div class="seg3">${opt.map(([k,n,d])=>`<button class="pk${fxq===k?' sel':''}" data-q="${k}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
-  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button><button class="b main" id="sx">닫기</button></div>`);
+  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button>${CL.user&&SP==='gs_'?`<button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
   $('md').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fxq=b.dataset.q;save('fxq',fxq);applyLite(fxq==='lite');openSettings()});
-  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal}
+  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout}
 
 // ===== 개발자 치트 =====
 function openCheat(){if(!DEV)return;let arm=0;
@@ -1890,7 +1897,7 @@ function fullGuide(){modal(`<div class="mbox"><h2>아이폰 전체 화면</h2><d
 function startScreen(){S.phase='menu';hidePlay();showTop(false);ov.hidden=false;const gst=SP==='gsg_';
   ov.className='ov title stsc';ov.innerHTML=`<div class="box stb">${LOGO}<div class="stbt"><button class="b main stgo" id="sgo">${gst?'내 계정으로 시작':'시작하기'}</button>
     ${navigator.standalone?'':`<button class="b stfs" id="sfs">전체 화면</button>`}<button class="stgu" id="sgu">${gst?'게스트로 계속하기':'게스트로 하기'}</button></div></div>`;
-  const go=m=>{try{sessionStorage.setItem('gs_mode',m)}catch(e){}if((m==='guest')!==gst){try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload()}else menu()};
+  const go=m=>{try{sessionStorage.setItem('gs_mode',m)}catch(e){}if((m==='guest')!==gst){try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload()}else enterMain()};
   $('sgo').onclick=()=>go('main');$('sgu').onclick=()=>go('guest');const f=$('sfs');if(f)f.onclick=()=>{if(canFull())full();else fullGuide()}}
 function full(){const d=document.documentElement;if(!canFull()){fullGuide();return}try{const r=(d.requestFullscreen||d.webkitRequestFullscreen).call(d);r&&r.then&&r.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}catch(e){}}
 
@@ -2447,7 +2454,7 @@ function drawTitle(){
 }
 let last=performance.now(),acc=0;
 function frame(now){
-  const dt=Math.min(.05,(now-last)/1000);last=now;S.t+=dt;
+  const dt=Math.min(.05,(now-last)/1000);last=now;S.t+=dt;if(SP==='gs_'&&!document.hidden)USER.ps=(USER.ps||0)+dt;
   // 시뮬레이션: 고정 60fps 간격 (기기와 상관없이 같은 속도)
   netTick(dt);
   if(S.mode!=='guest'){if(S.paused||S.resumeT>0||S.menuPause)acc=0;else{acc+=dt;let n=0;while(acc>=DT&&n<5){step(DT);acc-=DT;n++}if(n>=5)acc=0}}
@@ -2487,8 +2494,47 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
+
+// ===================== 로그인 · 서버 저장 (Firebase · 닉네임 + 숫자 4자리) =====================
+const FBC={apiKey:"AIzaSyBhKsybYzz0d3mBrNMwatPI0sjgQgn11tU",authDomain:"gungsin-duel.firebaseapp.com",projectId:"gungsin-duel",storageBucket:"gungsin-duel.firebasestorage.app",messagingSenderId:"203196099141",appId:"1:203196099141:web:9282e95e1602d1e967912c",databaseURL:"https://gungsin-duel-default-rtdb.asia-southeast1.firebasedatabase.app"};
+const CL={ok:false,auth:null,db:null,user:null,ready:null};
+function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();CL.db=firebase.firestore();CL.ok=true;
+  const off=CL.auth.onAuthStateChanged(u=>{CL.user=u;off();res(u)})}catch(e){res(null)}});return CL.ready}
+const nickMail=n=>'n'+[...new TextEncoder().encode(n.toLowerCase())].map(b=>b.toString(16).padStart(2,'0')).join('')+'@gungsin.game',pinPw=p=>'gs-'+p+'-duel';
+async function cloudPush(first){if(!CL.user||SP!=='gs_'||load('cuid','')!==CL.user.uid)return;cloudDirty=0;const u=USER,FV=firebase.firestore.FieldValue;
+  const doc={nick:CL.user.displayName||u.nickname,d:JSON.stringify({user:u,rec:load('rec',{w:0,l:0,d:0}),deck,bow:bowId,skin}),tier:u.tierIndex,div:u.div,pts:u.pts,gold:u.gold,wins:u.wins||0,games:u.games||0,ps:Math.round(u.ps||0),upd:FV.serverTimestamp()};
+  if(first)doc.created=FV.serverTimestamp();try{await CL.db.collection('users').doc(CL.user.uid).set(doc,{merge:true})}catch(e){cloudDirty=1}}
+// 서버에 정보가 있으면 이 폰으로 불러오고, 없으면 이 폰 정보를 서버로 올림
+async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
+  if(!isNew){const r=await CL.db.collection('users').doc(uid).get();if(r.exists)snap=r.data()}
+  if(snap&&snap.d){const D=JSON.parse(snap.d);save('user',D.user);save('rec',D.rec);save('deck',D.deck);save('bow',D.bow);save('skin',D.skin);save('cuid',uid);try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload();return 'reload'}
+  const lc=load('cuid','');if(lc&&lc!==uid){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
+  USER.nickname=nick;save('cuid',uid);saveUser();await cloudPush(true);return 'ok'}
+async function cloudGate(next){const u=await fbInit();if(!CL.ok){toast('서버에 연결 못 해서 이 폰에만 저장돼요');next();return}
+  if(u&&load('cuid','')===u.uid){next();return}
+  if(u){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){loginBox(next)}return}
+  loginBox(next)}
+function enterMain(){if(SP==='gs_')cloudGate(menu);else menu()}
+function loginBox(next,mode){mode=mode||'new';const nw=mode==='new';
+  modal(`<div class="mbox"><h2>${nw?'처음 시작하기':'이어서 하기'}</h2><div class="lsg"><button class="b${nw?' main':''}" id="lgn">처음이에요</button><button class="b${nw?'':' main'}" id="lgo">이어서 하기</button></div>
+  <input class="lin" id="lnk" maxlength="10" placeholder="닉네임 (2~10글자)" autocomplete="off"><input class="lin" id="lpw" type="password" inputmode="numeric" maxlength="4" placeholder="비밀번호 숫자 4자리" autocomplete="off">
+  <p class="lmsg" id="lmsg">${nw?'이 폰에서 하던 골드·계급·카드는 그대로 이어져요':'예전에 정한 닉네임과 숫자 4자리를 넣어 주세요'}</p>
+  <button class="b main" id="lgk">${nw?'만들기':'불러오기'}</button><button class="b" id="lgx">나중에 하기 (이 폰에만 저장)</button></div>`);
+  $('lgn').onclick=()=>loginBox(next,'new');$('lgo').onclick=()=>loginBox(next,'old');$('lgx').onclick=()=>{closeModal();next()};
+  $('lgk').onclick=async()=>{const n=$('lnk').value.trim(),p=$('lpw').value.trim(),m=$('lmsg'),b=$('lgk');
+    if(!/^[가-힣a-zA-Z0-9_]{2,10}$/.test(n)){m.textContent='닉네임은 한글·영어·숫자로 2~10글자예요';return}
+    if(!/^\d{4}$/.test(p)){m.textContent='비밀번호는 숫자 4자리예요';return}
+    b.disabled=true;m.textContent='잠시만요…';
+    try{let cr;if(nw){cr=await CL.auth.createUserWithEmailAndPassword(nickMail(n),pinPw(p));try{await cr.user.updateProfile({displayName:n})}catch(e){}}
+      else cr=await CL.auth.signInWithEmailAndPassword(nickMail(n),pinPw(p));
+      CL.user=cr.user;if(await cloudSync(n,nw)==='ok'){closeModal();toast(n+'님 환영해요!');next()}}
+    catch(e){b.disabled=false;const c=(e&&e.code)||'';
+      m.textContent=c.includes('email-already-in-use')?'이미 있는 닉네임이에요. 다른 닉네임을 써 주세요':c.includes('too-many')?'너무 많이 틀렸어요. 잠시 뒤에 다시 해 주세요':c.includes('network')?'인터넷 연결을 확인해 주세요':!nw?'닉네임이나 비밀번호가 틀렸어요':'다시 해 주세요 ('+c+')'}}}
+async function cloudLogout(){await cloudPush();try{await CL.auth.signOut()}catch(e){}CL.user=null;['user','rec','deck','bow','skin','cuid'].forEach(k=>{try{localStorage.removeItem(SP+k)}catch(e){}});location.reload()}
+setInterval(()=>{if(cloudDirty)cloudPush()},30000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cloudPush()});
 $('tbSet').innerHTML=ICO.gear;document.querySelector('.tb-l').onclick=openTiers;$('tbSet').onclick=openSettings;$('gm').onclick=openGM;applyLite(fxq==='lite');
-resize();(()=>{let a=null;try{a=sessionStorage.getItem('gs_auto');sessionStorage.removeItem('gs_auto')}catch(e){}if(a)menu();else startScreen()})();requestAnimationFrame(frame);
+resize();(()=>{let a=null;try{a=sessionStorage.getItem('gs_auto');sessionStorage.removeItem('gs_auto')}catch(e){}if(a)enterMain();else startScreen()})();requestAnimationFrame(frame);
 })();
 </script>
 </body>
