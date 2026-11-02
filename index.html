@@ -605,6 +605,7 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 
 .lin{font-family:var(--fd);font-size:20px;text-align:center;width:100%;background:#200805;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px;-webkit-user-select:text;user-select:text}
 .lsg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.lsg .b{width:100%}.lmsg{font-size:13px!important;color:#ffe08a!important}
+.seg3 .pk{width:auto;flex:initial;display:block;padding:8px 4px;border-radius:8px;overflow:visible;background:var(--panel);border:1px solid var(--line);box-shadow:none;scroll-snap-align:none}.seg3 .pk.sel{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
 </style>
 </head>
 <body>
@@ -1046,12 +1047,14 @@ let fxq=load('fxq','auto'),netv=load('netv',false);
 function applyLite(on){S.lite=!!on;try{if(on)Object.defineProperty(ctx,'shadowBlur',{configurable:true,get(){return 0},set(){}});else delete ctx.shadowBlur}catch(e){}}
 function openSettings(){const opt=[['auto','자동','폰 속도에 맞춰 알아서'],['high','화려하게','빛 효과 모두 켜기'],['lite','가볍게','버벅일 때 추천']];
   modal(`<div class="mbox"><h2>설정</h2><p class="lab">효과 품질</p><div class="seg3">${opt.map(([k,n,d])=>`<button class="pk${fxq===k?' sel':''}" data-q="${k}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
-  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button>${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
+  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button>${isAdmin()?'<button class="b" id="sdev">개발자 모드</button>':''}${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
   $('md').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fxq=b.dataset.q;save('fxq',fxq);applyLite(fxq==='lite');openSettings()});
-  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
+  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const dv=$('sdev');if(dv)dv.onclick=openCheat;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
 
 // ===== 개발자 치트 =====
-function openCheat(){if(!DEV)return;let arm=0;
+// 개발자 모드: 관리자 닉네임으로 로그인했을 때만 설정 창에 버튼이 생김
+const ADMIN_NICK='궁신관리자',isAdmin=()=>DEV&&SP==='gs_'&&!!(typeof CL!=='undefined'&&CL.user&&CL.user.displayName===ADMIN_NICK);
+function openCheat(){if(!isAdmin())return;let arm=0;
   modal(`<div class="mbox"><h2>개발자 모드</h2>
   <button class="b main" data-ch="gold">골드 +100,000G</button><button class="b" data-ch="max">모든 스킬·활 8레벨 + 카드 99장</button>
   <button class="b" data-ch="star">점수 +100 (즉시 승급)</button><button class="b" data-ch="bz">보너스 게이지 가득 채우기</button><button class="b" data-ch="abmax">능력 전부 50레벨</button><button class="b" data-ch="lv">전부 해금 (퀘스트·스킬 칸·상자)</button><button class="b" data-ch="skins">모든 캐릭터 얻기</button><button class="b" data-ch="fsk">다음 상자 캐릭터 확정</button><button class="b" data-ch="tier">다음 계급으로</button>
@@ -1074,7 +1077,7 @@ function openCheat(){if(!DEV)return;let arm=0;
     else if(c==='reset'){if(!arm){arm=1;b.textContent='한 번 더 누르면 정말 초기화돼요';return}
       ['user','rec','deck','bow','skin'].forEach(k=>{try{localStorage.removeItem(SP+k)}catch(e){}});USER=newUser();USER.qv=3;fixLoadout();saveUser();menu();toast('데이터를 초기화했어요')}
     else closeModal()})}
-window.cheat=()=>{openCheat();return '개발자 모드를 열었어요'};
+
 const WVN=w=>w<=-.08?'쉬움':w<=0?'조금 쉬움':w<=.07?'보통':w<=.14?'조금 어려움':w<=.2?'어려움':'매우 어려움';
 function openAIF(){const f=AIF||{t:USER.tierIndex,p:0,w:null},sel=(k,v,l)=>`<button class="b${f[k]===v?' main':''}" data-af="${k}:${v}">${l}</button>`;
   modal(`<div class="mbox"><h2>컴퓨터 고르기</h2><p class="imc2">계급</p><div class="afr">${[0,1,2,3,4].map(i=>sel('t',i,TIERS[i])).join('')}</div>
@@ -1280,7 +1283,7 @@ function menu(){
   ov.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const m=b.dataset.m;if(!isUnl(m))return lockT();if(m==='shop')openShop();else openCol(m)});
   if(side){{const e=$('sab');if(e)e.onclick=openAB}$('sat').onclick=openAtt;$('sdm').onclick=openDM;$('sfc').onclick=()=>fcReady()?claimFC():toast('무료 상자 '+hms(fcLeft()));
     LBT=setInterval(()=>{const e=$('lfc');if(!e){clearInterval(LBT);return}if(fcReady()){if(e.textContent!=='무료!')menu()}else e.textContent=hms(fcLeft())},1000)}
-  let taps=[];$('logo').addEventListener('pointerdown',()=>{const n=performance.now();taps=taps.filter(t=>n-t<2000);taps.push(n);if(taps.length>=5){taps=[];openCheat()}});
+
 }
 function lvPopup(u){let sl='';for(let j=0;j<5;j++)sl+=`<span class="lvs${j<u.slots?' on':''}${j>=u.prev&&j<u.slots?' nw':''}">${j<u.slots?'':ICO.lock}</span>`;
   modal(`<div class="pfx lvp" style="--c:#7ad8ff"><div class="pflash"></div><div class="pcen"><div class="pring"></div><div class="lvbig">${u.slots}</div></div>
@@ -2510,6 +2513,8 @@ async function cloudPush(first){if(!CL.user||SP!=='gs_'||load('cuid','')!==CL.us
 // 서버에 정보가 있으면 이 폰으로 불러오고, 없으면 이 폰 정보를 서버로 올림
 async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
   if(!isNew){const r=await tmo(CL.db.collection('users').doc(uid).get(),12000);if(r.exists)snap=r.data()}
+  if(snap&&snap.d&&(USER.games||0)>0){const su=JSON.parse(snap.d).user||{};if((su.games||0)!==(USER.games||0)&&await chooseData(su)==='local'){save('cuid',uid);USER.nickname=su.nickname||nick;saveUser();cloudPush();return 'ok'}}
+  if(snap&&snap.d&&load('cuid','')===uid&&((JSON.parse(snap.d).user||{}).games||0)===(USER.games||0)){cloudDirty=1;return 'ok'} // 이미 같은 정보면 그대로
   if(snap&&snap.d){const D=JSON.parse(snap.d);save('user',D.user);save('rec',D.rec);save('deck',D.deck);save('bow',D.bow);save('skin',D.skin);save('cuid',uid);try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload();return 'reload'}
   const lc=load('cuid','');if(lc&&lc!==uid){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
   USER.nickname=nick;save('cuid',uid);saveUser();cloudPush(true);return 'ok'}
@@ -2520,9 +2525,12 @@ async function cloudGate(next){if(gating)return;gating=1;const sb=$('sgo');if(sb
 async function cloudGate2(next){const u=await fbInit();
   if(u===undefined){toast('서버 연결이 느려서 이 폰에만 저장해요');next();return}
   if(!CL.ok){toast(window.firebase?'서버 연결 오류: '+(CL.err||''):'서버 도구를 못 불러왔어요 · 이 폰에만 저장돼요');next();return}
-  if(u&&load('cuid','')===u.uid){next();return}
+  if(u&&load('cuid','')===u.uid){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){next()}return}
   if(u){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){loginBox(next)}return}
   loginBox(next)}
+function chooseData(su){return new Promise(res=>{const row=(t,u,id)=>`<button class="b${id==='server'?' main':''}" id="cd_${id}"><b>${t}</b><br><small>${TIERS[u.tierIndex||0]} ${ROMAN[u.div||0]} · 골드 ${(u.gold||0).toLocaleString()} · ${u.games||0}판</small></button>`;
+  modal(`<div class="mbox"><h2>어느 정보로 할까요?</h2><p class="imc2">이 기기 정보와 서버 정보가 달라요. 고른 쪽으로 맞춰져요.</p>${row('이 기기 정보',USER,'local')}${row('서버 정보',su,'server')}<p class="imc2">⚠️ 고르지 않은 쪽 정보는 사라져요</p></div>`);
+  $('cd_local').onclick=()=>{closeModal();res('local')};$('cd_server').onclick=()=>{closeModal();res('server')}})}
 function enterMain(){if(SP==='gs_')cloudGate(menu);else menu()}
 function loginBox(next,mode){mode=mode||'new';const nw=mode==='new';
   modal(`<div class="mbox"><h2>${nw?'처음 시작하기':'이어서 하기'}</h2><div class="lsg"><button class="b${nw?' main':''}" id="lgn">처음이에요</button><button class="b${nw?'':' main'}" id="lgo">이어서 하기</button></div>
