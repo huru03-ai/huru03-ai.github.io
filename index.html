@@ -2516,7 +2516,7 @@ async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
   if(snap&&snap.d&&(USER.games||0)>0){const su=JSON.parse(snap.d).user||{};if((su.games||0)!==(USER.games||0)&&await chooseData(su)==='local'){save('cuid',uid);USER.nickname=su.nickname||nick;saveUser();cloudPush();return 'ok'}}
   if(snap&&snap.d&&load('cuid','')===uid&&((JSON.parse(snap.d).user||{}).games||0)===(USER.games||0)){cloudDirty=1;return 'ok'} // 이미 같은 정보면 그대로
   if(snap&&snap.d){const D=JSON.parse(snap.d);save('user',D.user);save('rec',D.rec);save('deck',D.deck);save('bow',D.bow);save('skin',D.skin);save('cuid',uid);try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload();return 'reload'}
-  const lc=load('cuid','');if(lc&&lc!==uid){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
+  const lc=load('cuid','');if(lc&&lc!==uid&&!((USER.games||0)>0&&await askBring())){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
   USER.nickname=nick;save('cuid',uid);saveUser();cloudPush(true);return 'ok'}
 let gating=0;
 async function cloudGate(next){if(gating)return;gating=1;const sb=$('sgo');if(sb){sb.disabled=true;sb.textContent='연결 중…'}
@@ -2528,6 +2528,9 @@ async function cloudGate2(next){const u=await fbInit();
   if(u&&load('cuid','')===u.uid){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){next()}return}
   if(u){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){loginBox(next)}return}
   loginBox(next)}
+function askBring(){return new Promise(res=>{modal(`<div class="mbox"><h2>이 기기 정보를 가져갈까요?</h2><p class="imc2">이 기기에 예전 정보가 있어요</p>
+  <button class="b main" id="ab_y"><b>가져가기</b><br><small>${TIERS[USER.tierIndex||0]} ${ROMAN[USER.div||0]} · 골드 ${(USER.gold||0).toLocaleString()} · ${USER.games||0}판</small></button><button class="b" id="ab_n">새로 시작하기</button></div>`);
+  $('ab_y').onclick=()=>{closeModal();res(true)};$('ab_n').onclick=()=>{closeModal();res(false)}})}
 function chooseData(su){return new Promise(res=>{const row=(t,u,id)=>`<button class="b${id==='server'?' main':''}" id="cd_${id}"><b>${t}</b><br><small>${TIERS[u.tierIndex||0]} ${ROMAN[u.div||0]} · 골드 ${(u.gold||0).toLocaleString()} · ${u.games||0}판</small></button>`;
   modal(`<div class="mbox"><h2>어느 정보로 할까요?</h2><p class="imc2">이 기기 정보와 서버 정보가 달라요. 고른 쪽으로 맞춰져요.</p>${row('이 기기 정보',USER,'local')}${row('서버 정보',su,'server')}<p class="imc2">⚠️ 고르지 않은 쪽 정보는 사라져요</p></div>`);
   $('cd_local').onclick=()=>{closeModal();res('local')};$('cd_server').onclick=()=>{closeModal();res('server')}})}
