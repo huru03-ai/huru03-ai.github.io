@@ -2502,7 +2502,7 @@ function frame(now){
 // ===================== 로그인 · 서버 저장 (Firebase · 닉네임 + 숫자 4자리) =====================
 const FBC={apiKey:"AIzaSyBhKsybYzz0d3mBrNMwatPI0sjgQgn11tU",authDomain:"gungsin-duel.firebaseapp.com",projectId:"gungsin-duel",storageBucket:"gungsin-duel.firebasestorage.app",messagingSenderId:"203196099141",appId:"1:203196099141:web:9282e95e1602d1e967912c",databaseURL:"https://gungsin-duel-default-rtdb.asia-southeast1.firebasedatabase.app"};
 const CL={ok:false,auth:null,db:null,user:null,ready:null};
-function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();if(!/^https?:$/.test(location.protocol)){try{CL.auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(()=>{})}catch(e){}} // 파일로 열면 로그인 기억 안 함 (막혀서 멈추는 것 방지)CL.db=firebase.firestore();try{CL.db.settings({experimentalForceLongPolling:true,ignoreUndefinedProperties:true,merge:true})}catch(e){}CL.ok=true;
+function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();if(!/^https?:$/.test(location.protocol)){try{CL.auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(()=>{})}catch(e){}}/* 파일로 열면 로그인 기억 안 함 */CL.db=firebase.firestore();try{CL.db.settings({experimentalForceLongPolling:true,ignoreUndefinedProperties:true,merge:true})}catch(e){}CL.ok=true;
   const off=CL.auth.onAuthStateChanged(u=>{CL.user=u;off();res(u)},()=>res(null))}catch(e){CL.err=String(e&&e.message||e);CL.ok=false;res(null)}
   setTimeout(()=>{if(CL.ok&&CL.user===null&&CL.auth&&CL.auth.currentUser===null)res(null)},6000);setTimeout(()=>res(undefined),8000)});return CL.ready}
 const tmo=(pr,ms)=>Promise.race([pr,new Promise((_,j)=>setTimeout(()=>j({code:'timeout'}),ms))]);
@@ -2527,7 +2527,9 @@ async function cloudGate(next){if(gating)return;gating=1;const sb=$('sgo');if(sb
 async function cloudGate2(next){const u=await fbInit();
   if(u===undefined){toast('서버 연결이 느려서 이 폰에만 저장해요');next();return}
   if(!CL.ok){toast(window.firebase?'서버 연결 오류: '+(CL.err||''):'서버 도구를 못 불러왔어요 · 이 폰에만 저장돼요');next();return}
-  if(u&&load('cuid','')===u.uid){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){next()}return}
+  if(u){try{await tmo(u.reload(),8000)}catch(e){const c=(e&&e.code)||''; // 지워진 계정으로 남아 있던 로그인이면 정리하고 로그인 창 보여 주기
+    if(/user-not-found|user-token-expired|user-disabled|invalid-user-token|timeout/.test(c)||c==='auth/internal-error'){try{await CL.auth.signOut()}catch(_){}CL.user=null;save('cuid','');loginBox(next);return}}}
+  if(u&&load('cuid','')===u.uid){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){toast('서버 오류: '+((e&&(e.code||e.message))||e));next()}return}
   if(u){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){loginBox(next)}return}
   loginBox(next)}
 function askBring(){return new Promise(res=>{modal(`<div class="mbox"><h2>이 기기 정보를 가져갈까요?</h2><p class="imc2">이 기기에 예전 정보가 있어요</p>
