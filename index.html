@@ -1046,9 +1046,9 @@ let fxq=load('fxq','auto'),netv=load('netv',false);
 function applyLite(on){S.lite=!!on;try{if(on)Object.defineProperty(ctx,'shadowBlur',{configurable:true,get(){return 0},set(){}});else delete ctx.shadowBlur}catch(e){}}
 function openSettings(){const opt=[['auto','자동','폰 속도에 맞춰 알아서'],['high','화려하게','빛 효과 모두 켜기'],['lite','가볍게','버벅일 때 추천']];
   modal(`<div class="mbox"><h2>설정</h2><p class="lab">효과 품질</p><div class="seg3">${opt.map(([k,n,d])=>`<button class="pk${fxq===k?' sel':''}" data-q="${k}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
-  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button>${CL.user&&SP==='gs_'?`<button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
+  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button>${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
   $('md').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fxq=b.dataset.q;save('fxq',fxq);applyLite(fxq==='lite');openSettings()});
-  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout}
+  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
 
 // ===== 개발자 치트 =====
 function openCheat(){if(!DEV)return;let arm=0;
@@ -2498,19 +2498,21 @@ function frame(now){
 // ===================== 로그인 · 서버 저장 (Firebase · 닉네임 + 숫자 4자리) =====================
 const FBC={apiKey:"AIzaSyBhKsybYzz0d3mBrNMwatPI0sjgQgn11tU",authDomain:"gungsin-duel.firebaseapp.com",projectId:"gungsin-duel",storageBucket:"gungsin-duel.firebasestorage.app",messagingSenderId:"203196099141",appId:"1:203196099141:web:9282e95e1602d1e967912c",databaseURL:"https://gungsin-duel-default-rtdb.asia-southeast1.firebasedatabase.app"};
 const CL={ok:false,auth:null,db:null,user:null,ready:null};
-function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();CL.db=firebase.firestore();CL.ok=true;
+function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();CL.db=firebase.firestore();try{CL.db.settings({experimentalForceLongPolling:true,ignoreUndefinedProperties:true,merge:true})}catch(e){}CL.ok=true;
   const off=CL.auth.onAuthStateChanged(u=>{CL.user=u;off();res(u)},()=>res(null))}catch(e){CL.err=String(e&&e.message||e);CL.ok=false;res(null)}
   setTimeout(()=>{if(CL.ok&&CL.user===null&&CL.auth&&CL.auth.currentUser===null)res(null)},6000);setTimeout(()=>res(undefined),8000)});return CL.ready}
+const tmo=(pr,ms)=>Promise.race([pr,new Promise((_,j)=>setTimeout(()=>j({code:'timeout'}),ms))]);
 const nickMail=n=>'n'+[...new TextEncoder().encode(n.toLowerCase())].map(b=>b.toString(16).padStart(2,'0')).join('')+'@gungsin.game',pinPw=p=>'gs-'+p+'-duel';
 async function cloudPush(first){if(!CL.user||SP!=='gs_'||load('cuid','')!==CL.user.uid)return;cloudDirty=0;const u=USER,FV=firebase.firestore.FieldValue;
   const doc={nick:CL.user.displayName||u.nickname,d:JSON.stringify({user:u,rec:load('rec',{w:0,l:0,d:0}),deck,bow:bowId,skin}),tier:u.tierIndex,div:u.div,pts:u.pts,gold:u.gold,wins:u.wins||0,games:u.games||0,ps:Math.round(u.ps||0),upd:FV.serverTimestamp()};
-  if(first)doc.created=FV.serverTimestamp();try{await CL.db.collection('users').doc(CL.user.uid).set(doc,{merge:true})}catch(e){cloudDirty=1}}
+  if(first)doc.created=FV.serverTimestamp();try{await tmo(CL.db.collection('users').doc(CL.user.uid).set(doc,{merge:true}),15000);if(!CL.saved){CL.saved=1;toast('서버에 저장됐어요 ✓')}CL.last='성공 '+new Date().toLocaleTimeString()}
+  catch(e){cloudDirty=1;const c=(e&&(e.code||e.message))||String(e);CL.last='실패 · '+c;const n=Date.now();if(!CL.et||n-CL.et>60000){CL.et=n;toast('서버 저장 실패: '+c)}}}
 // 서버에 정보가 있으면 이 폰으로 불러오고, 없으면 이 폰 정보를 서버로 올림
 async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
-  if(!isNew){const r=await CL.db.collection('users').doc(uid).get();if(r.exists)snap=r.data()}
+  if(!isNew){const r=await tmo(CL.db.collection('users').doc(uid).get(),12000);if(r.exists)snap=r.data()}
   if(snap&&snap.d){const D=JSON.parse(snap.d);save('user',D.user);save('rec',D.rec);save('deck',D.deck);save('bow',D.bow);save('skin',D.skin);save('cuid',uid);try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload();return 'reload'}
   const lc=load('cuid','');if(lc&&lc!==uid){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
-  USER.nickname=nick;save('cuid',uid);saveUser();await cloudPush(true);return 'ok'}
+  USER.nickname=nick;save('cuid',uid);saveUser();cloudPush(true);return 'ok'}
 let gating=0;
 async function cloudGate(next){if(gating)return;gating=1;const sb=$('sgo');if(sb){sb.disabled=true;sb.textContent='연결 중…'}
   const done=()=>{gating=0;if(sb&&document.body.contains(sb)){sb.disabled=false;sb.textContent='시작하기'}};
@@ -2532,11 +2534,11 @@ function loginBox(next,mode){mode=mode||'new';const nw=mode==='new';
     if(!/^[가-힣a-zA-Z0-9_]{2,10}$/.test(n)){m.textContent='닉네임은 한글·영어·숫자로 2~10글자예요';return}
     if(!/^\d{4}$/.test(p)){m.textContent='비밀번호는 숫자 4자리예요';return}
     b.disabled=true;m.textContent='잠시만요…';
-    try{let cr;if(nw){cr=await CL.auth.createUserWithEmailAndPassword(nickMail(n),pinPw(p));try{await cr.user.updateProfile({displayName:n})}catch(e){}}
-      else cr=await CL.auth.signInWithEmailAndPassword(nickMail(n),pinPw(p));
+    try{let cr;if(nw){cr=await tmo(CL.auth.createUserWithEmailAndPassword(nickMail(n),pinPw(p)),15000);try{await tmo(cr.user.updateProfile({displayName:n}),6000)}catch(e){}}
+      else cr=await tmo(CL.auth.signInWithEmailAndPassword(nickMail(n),pinPw(p)),15000);
       CL.user=cr.user;if(await cloudSync(n,nw)==='ok'){closeModal();toast(n+'님 환영해요!');next()}}
     catch(e){b.disabled=false;const c=(e&&e.code)||'';
-      m.textContent=c.includes('email-already-in-use')?'이미 있는 닉네임이에요. 다른 닉네임을 써 주세요':c.includes('too-many')?'너무 많이 틀렸어요. 잠시 뒤에 다시 해 주세요':c.includes('network')?'인터넷 연결을 확인해 주세요':!nw?'닉네임이나 비밀번호가 틀렸어요':'다시 해 주세요 ('+c+')'}}}
+      m.textContent=c.includes('email-already-in-use')?'이미 있는 닉네임이에요. 다른 닉네임을 써 주세요':c.includes('too-many')?'너무 많이 틀렸어요. 잠시 뒤에 다시 해 주세요':c.includes('network')||c==='timeout'?'서버 응답이 없어요. 인터넷을 확인하고 다시 눌러 주세요 (이미 만들어졌다면 이어서 하기로)':!nw?'닉네임이나 비밀번호가 틀렸어요':'다시 해 주세요 ('+c+')'}}}
 async function cloudLogout(){await cloudPush();try{await CL.auth.signOut()}catch(e){}CL.user=null;['user','rec','deck','bow','skin','cuid'].forEach(k=>{try{localStorage.removeItem(SP+k)}catch(e){}});location.reload()}
 setInterval(()=>{if(cloudDirty)cloudPush()},30000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cloudPush()});
