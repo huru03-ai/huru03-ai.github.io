@@ -2499,7 +2499,8 @@ function frame(now){
 const FBC={apiKey:"AIzaSyBhKsybYzz0d3mBrNMwatPI0sjgQgn11tU",authDomain:"gungsin-duel.firebaseapp.com",projectId:"gungsin-duel",storageBucket:"gungsin-duel.firebasestorage.app",messagingSenderId:"203196099141",appId:"1:203196099141:web:9282e95e1602d1e967912c",databaseURL:"https://gungsin-duel-default-rtdb.asia-southeast1.firebasedatabase.app"};
 const CL={ok:false,auth:null,db:null,user:null,ready:null};
 function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();CL.db=firebase.firestore();CL.ok=true;
-  const off=CL.auth.onAuthStateChanged(u=>{CL.user=u;off();res(u)})}catch(e){res(null)}});return CL.ready}
+  const off=CL.auth.onAuthStateChanged(u=>{CL.user=u;off();res(u)},()=>res(null))}catch(e){CL.err=String(e&&e.message||e);CL.ok=false;res(null)}
+  setTimeout(()=>{if(CL.ok&&CL.user===null&&CL.auth&&CL.auth.currentUser===null)res(null)},6000);setTimeout(()=>res(undefined),8000)});return CL.ready}
 const nickMail=n=>'n'+[...new TextEncoder().encode(n.toLowerCase())].map(b=>b.toString(16).padStart(2,'0')).join('')+'@gungsin.game',pinPw=p=>'gs-'+p+'-duel';
 async function cloudPush(first){if(!CL.user||SP!=='gs_'||load('cuid','')!==CL.user.uid)return;cloudDirty=0;const u=USER,FV=firebase.firestore.FieldValue;
   const doc={nick:CL.user.displayName||u.nickname,d:JSON.stringify({user:u,rec:load('rec',{w:0,l:0,d:0}),deck,bow:bowId,skin}),tier:u.tierIndex,div:u.div,pts:u.pts,gold:u.gold,wins:u.wins||0,games:u.games||0,ps:Math.round(u.ps||0),upd:FV.serverTimestamp()};
@@ -2510,7 +2511,13 @@ async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
   if(snap&&snap.d){const D=JSON.parse(snap.d);save('user',D.user);save('rec',D.rec);save('deck',D.deck);save('bow',D.bow);save('skin',D.skin);save('cuid',uid);try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload();return 'reload'}
   const lc=load('cuid','');if(lc&&lc!==uid){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
   USER.nickname=nick;save('cuid',uid);saveUser();await cloudPush(true);return 'ok'}
-async function cloudGate(next){const u=await fbInit();if(!CL.ok){toast('서버에 연결 못 해서 이 폰에만 저장돼요');next();return}
+let gating=0;
+async function cloudGate(next){if(gating)return;gating=1;const sb=$('sgo');if(sb){sb.disabled=true;sb.textContent='연결 중…'}
+  const done=()=>{gating=0;if(sb&&document.body.contains(sb)){sb.disabled=false;sb.textContent='시작하기'}};
+  try{await cloudGate2(next)}catch(e){toast('연결 오류: '+((e&&(e.code||e.message))||e));next()}done()}
+async function cloudGate2(next){const u=await fbInit();
+  if(u===undefined){toast('서버 연결이 느려서 이 폰에만 저장해요');next();return}
+  if(!CL.ok){toast(window.firebase?'서버 연결 오류: '+(CL.err||''):'서버 도구를 못 불러왔어요 · 이 폰에만 저장돼요');next();return}
   if(u&&load('cuid','')===u.uid){next();return}
   if(u){try{if(await cloudSync(u.displayName||USER.nickname,false)==='ok')next()}catch(e){loginBox(next)}return}
   loginBox(next)}
