@@ -606,6 +606,7 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 .lin{font-family:var(--fd);font-size:20px;text-align:center;width:100%;background:#200805;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px;-webkit-user-select:text;user-select:text}
 .lsg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.lsg .b{width:100%}.lmsg{font-size:13px!important;color:#ffe08a!important}
 .seg3 .pk{width:auto;flex:initial;display:block;padding:8px 4px;border-radius:8px;overflow:visible;background:var(--panel);border:1px solid var(--line);box-shadow:none;scroll-snap-align:none}.seg3 .pk.sel{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.mvt{height:110px;font-family:monospace;font-size:11px;text-align:left;word-break:break-all;resize:none}
 </style>
 </head>
 <body>
@@ -1047,9 +1048,9 @@ let fxq=load('fxq','auto'),netv=load('netv',false);
 function applyLite(on){S.lite=!!on;try{if(on)Object.defineProperty(ctx,'shadowBlur',{configurable:true,get(){return 0},set(){}});else delete ctx.shadowBlur}catch(e){}}
 function openSettings(){const opt=[['auto','자동','폰 속도에 맞춰 알아서'],['high','화려하게','빛 효과 모두 켜기'],['lite','가볍게','버벅일 때 추천']];
   modal(`<div class="mbox"><h2>설정</h2><p class="lab">효과 품질</p><div class="seg3">${opt.map(([k,n,d])=>`<button class="pk${fxq===k?' sel':''}" data-q="${k}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
-  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button>${isAdmin()?'<button class="b" id="sdev">개발자 모드</button>':''}${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
+  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button><button class="b" id="smv">정보 옮기기 (코드)</button>${isAdmin()?'<button class="b" id="sdev">개발자 모드</button>':''}${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
   $('md').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fxq=b.dataset.q;save('fxq',fxq);applyLite(fxq==='lite');openSettings()});
-  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const dv=$('sdev');if(dv)dv.onclick=openCheat;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
+  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const dv=$('sdev');if(dv)dv.onclick=openCheat;$('smv').onclick=openMove;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
 
 // ===== 개발자 치트 =====
 // 개발자 모드: 관리자 닉네임으로 로그인했을 때만 설정 창에 버튼이 생김
@@ -2501,7 +2502,7 @@ function frame(now){
 // ===================== 로그인 · 서버 저장 (Firebase · 닉네임 + 숫자 4자리) =====================
 const FBC={apiKey:"AIzaSyBhKsybYzz0d3mBrNMwatPI0sjgQgn11tU",authDomain:"gungsin-duel.firebaseapp.com",projectId:"gungsin-duel",storageBucket:"gungsin-duel.firebasestorage.app",messagingSenderId:"203196099141",appId:"1:203196099141:web:9282e95e1602d1e967912c",databaseURL:"https://gungsin-duel-default-rtdb.asia-southeast1.firebasedatabase.app"};
 const CL={ok:false,auth:null,db:null,user:null,ready:null};
-function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();CL.db=firebase.firestore();try{CL.db.settings({experimentalForceLongPolling:true,ignoreUndefinedProperties:true,merge:true})}catch(e){}CL.ok=true;
+function fbInit(){if(CL.ready)return CL.ready;CL.ready=new Promise(res=>{try{if(!window.firebase)return res(null);firebase.initializeApp(FBC);CL.auth=firebase.auth();if(!/^https?:$/.test(location.protocol)){try{CL.auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(()=>{})}catch(e){}} // 파일로 열면 로그인 기억 안 함 (막혀서 멈추는 것 방지)CL.db=firebase.firestore();try{CL.db.settings({experimentalForceLongPolling:true,ignoreUndefinedProperties:true,merge:true})}catch(e){}CL.ok=true;
   const off=CL.auth.onAuthStateChanged(u=>{CL.user=u;off();res(u)},()=>res(null))}catch(e){CL.err=String(e&&e.message||e);CL.ok=false;res(null)}
   setTimeout(()=>{if(CL.ok&&CL.user===null&&CL.auth&&CL.auth.currentUser===null)res(null)},6000);setTimeout(()=>res(undefined),8000)});return CL.ready}
 const tmo=(pr,ms)=>Promise.race([pr,new Promise((_,j)=>setTimeout(()=>j({code:'timeout'}),ms))]);
@@ -2512,6 +2513,7 @@ async function cloudPush(first){if(!CL.user||SP!=='gs_'||load('cuid','')!==CL.us
   catch(e){cloudDirty=1;const c=(e&&(e.code||e.message))||String(e);CL.last='실패 · '+c;const n=Date.now();if(!CL.et||n-CL.et>60000){CL.et=n;toast('서버 저장 실패: '+c)}}}
 // 서버에 정보가 있으면 이 폰으로 불러오고, 없으면 이 폰 정보를 서버로 올림
 async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
+  let imp=null;try{imp=sessionStorage.getItem('gs_imp');sessionStorage.removeItem('gs_imp')}catch(e){}if(imp&&load('cuid','')===uid){cloudPush();return 'ok'} // 코드로 가져온 직후엔 그대로 서버에 올림
   if(!isNew){const r=await tmo(CL.db.collection('users').doc(uid).get(),12000);if(r.exists)snap=r.data()}
   if(snap&&snap.d&&(USER.games||0)>0){const su=JSON.parse(snap.d).user||{};if((su.games||0)!==(USER.games||0)&&await chooseData(su)==='local'){save('cuid',uid);USER.nickname=su.nickname||nick;saveUser();cloudPush();return 'ok'}}
   if(snap&&snap.d&&load('cuid','')===uid&&((JSON.parse(snap.d).user||{}).games||0)===(USER.games||0)){cloudDirty=1;return 'ok'} // 이미 같은 정보면 그대로
@@ -2531,6 +2533,23 @@ async function cloudGate2(next){const u=await fbInit();
 function askBring(){return new Promise(res=>{modal(`<div class="mbox"><h2>이 기기 정보를 가져갈까요?</h2><p class="imc2">이 기기에 예전 정보가 있어요</p>
   <button class="b main" id="ab_y"><b>가져가기</b><br><small>${TIERS[USER.tierIndex||0]} ${ROMAN[USER.div||0]} · 골드 ${(USER.gold||0).toLocaleString()} · ${USER.games||0}판</small></button><button class="b" id="ab_n">새로 시작하기</button></div>`);
   $('ab_y').onclick=()=>{closeModal();res(true)};$('ab_n').onclick=()=>{closeModal();res(false)}})}
+// ===== 정보 옮기기 코드: 파일에서 서버 연결이 안 될 때, 코드를 복사해서 사이트에 붙여넣어 옮김 =====
+const mvSum=s=>{let h=7;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h.toString(36)};
+function mvMake(){const j=btoa(unescape(encodeURIComponent(JSON.stringify({user:USER,rec:load('rec',{w:0,l:0,d:0}),deck,bow:bowId,skin}))));return 'GS1.'+j+'.'+mvSum(j)}
+function mvRead(c){c=(c||'').replace(/\s/g,'');const m=c.match(/^GS1\.([A-Za-z0-9+/=]+)\.([a-z0-9]+)$/);if(!m||mvSum(m[1])!==m[2])return null;try{return JSON.parse(decodeURIComponent(escape(atob(m[1]))))}catch(e){return null}}
+function openMove(){modal(`<div class="mbox"><h2>정보 옮기기</h2><p class="imc2">옛 기기: 코드 만들기 → 복사 → 카톡 나에게 보내기 등으로 보관<br>새 기기: 로그인 후 여기서 코드 붙여넣기</p>
+  <button class="b main" id="mvo">코드 만들기 (이 기기 정보)</button><button class="b" id="mvi">코드 붙여넣기 (이 기기로 가져오기)</button><button class="b" id="mvx">닫기</button></div>`);
+  $('mvx').onclick=closeModal;
+  $('mvo').onclick=()=>{const c=mvMake();modal(`<div class="mbox"><h2>내 정보 코드</h2><p class="imc2">${TIERS[USER.tierIndex||0]} ${ROMAN[USER.div||0]} · 골드 ${(USER.gold||0).toLocaleString()} · ${USER.games||0}판</p>
+    <textarea class="lin mvt" id="mvc" readonly>${c}</textarea><button class="b main" id="mvcp">복사하기</button><p class="lmsg" id="mvm">복사가 안 되면 글자를 꾹 눌러 전체 선택 → 복사</p><button class="b" id="mvx">닫기</button></div>`);
+    $('mvx').onclick=closeModal;$('mvcp').onclick=async()=>{const t=$('mvc');t.focus();t.select();t.setSelectionRange(0,c.length);let ok=false;
+      try{await navigator.clipboard.writeText(c);ok=true}catch(e){try{ok=document.execCommand('copy')}catch(e2){}}$('mvm').textContent=ok?'복사됐어요! 카톡 나에게 보내기 등에 붙여넣어 두세요':'꾹 눌러서 직접 복사해 주세요'}};
+  $('mvi').onclick=()=>{modal(`<div class="mbox"><h2>코드 붙여넣기</h2><textarea class="lin mvt" id="mvc" placeholder="GS1. 으로 시작하는 코드"></textarea><p class="lmsg" id="mvm">${CL.user&&SP==='gs_'?'붙여넣으면 지금 계정('+(CL.user.displayName||USER.nickname)+')으로 서버에도 저장돼요':'⚠️ 로그인 안 한 상태라 이 기기에만 저장돼요'}</p>
+    <button class="b main" id="mvok">가져오기</button><button class="b" id="mvx">닫기</button></div>`);$('mvx').onclick=closeModal;
+    $('mvok').onclick=()=>{const D=mvRead($('mvc').value);if(!D||!D.user){$('mvm').textContent='코드가 올바르지 않아요. 처음부터 끝까지 다 붙여넣었는지 확인해 주세요';return}const u=D.user;
+      modal(`<div class="mbox"><h2>이 정보로 바꿀까요?</h2><p>${TIERS[u.tierIndex||0]} ${ROMAN[u.div||0]} · 골드 ${(u.gold||0).toLocaleString()} · ${u.games||0}판</p><p class="imc2">⚠️ 지금 이 기기 정보는 이걸로 바뀌어요</p><button class="b main" id="mvy">바꾸기</button><button class="b" id="mvx">취소</button></div>`);
+      $('mvx').onclick=closeModal;$('mvy').onclick=()=>{if(CL.user)u.nickname=CL.user.displayName||u.nickname;save('user',u);save('rec',D.rec||{w:0,l:0,d:0});save('deck',D.deck||[]);save('bow',D.bow||'bal');save('skin',D.skin||'novice');
+        try{sessionStorage.setItem('gs_imp','1');sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload()}}}}
 function chooseData(su){return new Promise(res=>{const row=(t,u,id)=>`<button class="b${id==='server'?' main':''}" id="cd_${id}"><b>${t}</b><br><small>${TIERS[u.tierIndex||0]} ${ROMAN[u.div||0]} · 골드 ${(u.gold||0).toLocaleString()} · ${u.games||0}판</small></button>`;
   modal(`<div class="mbox"><h2>어느 정보로 할까요?</h2><p class="imc2">이 기기 정보와 서버 정보가 달라요. 고른 쪽으로 맞춰져요.</p>${row('이 기기 정보',USER,'local')}${row('서버 정보',su,'server')}<p class="imc2">⚠️ 고르지 않은 쪽 정보는 사라져요</p></div>`);
   $('cd_local').onclick=()=>{closeModal();res('local')};$('cd_server').onclick=()=>{closeModal();res('server')}})}
