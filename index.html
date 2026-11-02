@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 :root{
   --bg:#1a0503; --panel:rgba(32,10,8,.94); --line:#6a2a1e; --ink:#fbefe6; --dim:#c9a99a;
@@ -2521,8 +2522,12 @@ async function cloudSync(nick,isNew){const uid=CL.user.uid;let snap=null;
   const lc=load('cuid','');if(lc&&lc!==uid&&!((USER.games||0)>0&&await askBring())){USER=newUser();USER.qv=3;try{localStorage.removeItem(SP+'rec')}catch(e){}fixLoadout()} // 이 폰 정보가 다른 계정 것이면 새로 시작
   USER.nickname=nick;save('cuid',uid);saveUser();cloudPush(true);return 'ok'}
 let gating=0;
+// 접속 중 표시: 로그인한 사람만, 앱을 끄면 자동으로 사라짐 (관리자 페이지에서 접속자 수로 보임)
+function presenceOn(){try{if(CL.pres||!CL.user||SP!=='gs_'||!firebase.database||!/^https?:$/.test(location.protocol))return;CL.pres=1;
+  const db=firebase.database(),ref=db.ref('status/'+CL.user.uid);db.ref('.info/connected').on('value',s=>{if(s.val()===true&&CL.user)ref.onDisconnect().remove().then(()=>ref.set({nick:CL.user.displayName||USER.nickname,t:firebase.database.ServerValue.TIMESTAMP})).catch(()=>{})})}catch(e){}}
 async function cloudGate(next){if(gating)return;gating=1;const sb=$('sgo');if(sb){sb.disabled=true;sb.textContent='연결 중…'}
   const done=()=>{gating=0;if(sb&&document.body.contains(sb)){sb.disabled=false;sb.textContent='시작하기'}};
+  const nx=next;next=()=>{presenceOn();nx()};
   try{await cloudGate2(next)}catch(e){toast('연결 오류: '+((e&&(e.code||e.message))||e));next()}done()}
 async function cloudGate2(next){const u=await fbInit();
   if(u===undefined){toast('서버 연결이 느려서 이 폰에만 저장해요');next();return}
@@ -2571,7 +2576,7 @@ function loginBox(next,mode){mode=mode||'new';const nw=mode==='new';
       CL.user=cr.user;if(await cloudSync(n,nw)==='ok'){closeModal();toast(n+'님 환영해요!');next()}}
     catch(e){b.disabled=false;const c=(e&&e.code)||'';
       m.textContent=c.includes('email-already-in-use')?'이미 있는 닉네임이에요. 다른 닉네임을 써 주세요':c.includes('too-many')?'너무 많이 틀렸어요. 잠시 뒤에 다시 해 주세요':c.includes('network')||c==='timeout'?'서버 응답이 없어요. 인터넷을 확인하고 다시 눌러 주세요 (이미 만들어졌다면 이어서 하기로)':!nw?'닉네임이나 비밀번호가 틀렸어요':'다시 해 주세요 ('+c+')'}}}
-async function cloudLogout(){await cloudPush();try{await CL.auth.signOut()}catch(e){}CL.user=null;['user','rec','deck','bow','skin','cuid'].forEach(k=>{try{localStorage.removeItem(SP+k)}catch(e){}});location.reload()}
+async function cloudLogout(){await cloudPush();try{if(CL.user)await firebase.database().ref('status/'+CL.user.uid).remove()}catch(e){}try{await CL.auth.signOut()}catch(e){}CL.user=null;['user','rec','deck','bow','skin','cuid'].forEach(k=>{try{localStorage.removeItem(SP+k)}catch(e){}});location.reload()}
 setInterval(()=>{if(cloudDirty)cloudPush()},30000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cloudPush()});
 $('tbSet').innerHTML=ICO.gear;document.querySelector('.tb-l').onclick=openTiers;$('tbSet').onclick=openSettings;$('gm').onclick=openGM;applyLite(fxq==='lite');
