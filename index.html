@@ -6,7 +6,34 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="궁신결투">
+<link rel="manifest" href="manifest.json">
 <title>궁신 결투</title>
+<script>
+/* 폰을 세로로 들고 있어도 게임을 90도 돌려서 가로로 꽉 차게 보여 줌.
+   게임은 안쪽 창(iframe)에서 돌아가고, 바깥은 화면 방향에 맞춰 돌려 주기만 함. 폰을 가로로 돌리면 원래대로. */
+(function(){
+  var top_=window.top===window,touch=window.matchMedia&&matchMedia('(pointer:coarse)').matches,web=/^https?:$/.test(location.protocol);
+  if(!top_||!web||/[?&]norot=1/.test(location.search))return;
+  var u=location.href.split('#')[0];u+=(u.indexOf('?')<0?'?':'&')+'inwrap=1';
+  document.write('<style>html,body{margin:0;height:100%;background:#1a0503;overflow:hidden;touch-action:none;overscroll-behavior:none}'
+   +'#wb{position:fixed;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom);left:env(safe-area-inset-left);right:env(safe-area-inset-right);overflow:hidden}'
+   +'#wf{position:absolute;left:0;top:0;border:0;display:block;transform-origin:0 0;background:#1a0503}</style>'
+   +'<div id="wb"><iframe id="wf" allow="fullscreen; autoplay; clipboard-write" allowfullscreen></iframe></div>');
+  var wb=document.getElementById('wb'),f=document.getElementById('wf');f.src=u;
+  function lay(){var w=wb.clientWidth,h=wb.clientHeight;if(!w||!h)return;
+    if(h>w){f.style.width=h+'px';f.style.height=w+'px';f.style.transform='translate('+w+'px,0) rotate(90deg)'}
+    else{f.style.width=w+'px';f.style.height=h+'px';f.style.transform='none'}}
+  lay();['resize','orientationchange'].forEach(function(e){addEventListener(e,function(){lay();setTimeout(lay,250);setTimeout(lay,700)})});
+  if(window.visualViewport)visualViewport.addEventListener('resize',lay);
+  document.addEventListener('fullscreenchange',function(){setTimeout(lay,200)});
+  // 안쪽 게임의 '전체 화면' 버튼이 부르는 함수 (안드로이드: 전체 화면 + 가로 고정)
+  window.__wrapFull=function(){var d=document.documentElement,q=d.requestFullscreen||d.webkitRequestFullscreen;if(!q)return false;
+    try{var r=q.call(d);r&&r.then&&r.then(function(){try{screen.orientation.lock('landscape').catch(function(){})}catch(e){}}).catch(function(){})}catch(e){}return true};
+  window.__wrapCanFull=function(){var d=document.documentElement;return !!(d.requestFullscreen||d.webkitRequestFullscreen)};
+  document.write('<plaintext style="display:none">'); // 아래 게임 코드는 바깥에서 실행하지 않음 (안쪽 창에서만 실행)
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@500;700&family=Pixelify+Sans:wght@700&display=swap">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -79,7 +106,7 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 .pick.nb{grid-template-columns:1fr}
 .box canvas{position:static;display:block;margin:0 auto}
 .rot{display:none}
-@media (orientation:portrait){.rot{display:flex;position:fixed;inset:0;z-index:9;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:24px;text-align:center}}
+
 @media (max-height:430px){.cd{width:58px;height:78px}.cd .ic svg{width:30px;height:30px}.cd .ic{inset:12px 8px 16px}.hex{width:200px;height:70px}.mvb svg{width:38px;height:38px}}
 @media (prefers-reduced-motion:reduce){.cd.ready{animation:none}}
 [hidden]{display:none!important}
@@ -608,6 +635,7 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 .lsg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.lsg .b{width:100%}.lmsg{font-size:13px!important;color:#ffe08a!important}
 .seg3 .pk{width:auto;flex:initial;display:block;padding:8px 4px;border-radius:8px;overflow:visible;background:var(--panel);border:1px solid var(--line);box-shadow:none;scroll-snap-align:none}.seg3 .pk.sel{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
 .mvt{height:110px;font-family:monospace;font-size:11px;text-align:left;word-break:break-all;resize:none}
+.lmenu.g2{display:grid;grid-template-columns:auto auto;gap:6px}
 </style>
 </head>
 <body>
@@ -621,7 +649,7 @@ input.code{font-family:var(--fd);font-size:28px;letter-spacing:.3em;width:160px;
 <div id="top" hidden><div class="tb-l"><span class="tbadge" id="tbB"><span>I</span></span><div><b id="tbN"></b><span id="tbT"></span></div><span id="tbS"></span></div>
 <div class="tb-r"><span class="goldp"><i class="coin"></i><b id="tbG" style="font-weight:400"></b></span><button class="ib" id="tbSet" aria-label="설정"></button></div></div>
 <div id="pz" hidden></div><button id="gm" hidden aria-label="메뉴"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div id="gc" class="gc" hidden></div><div id="md" hidden></div><div id="toast" hidden></div>
-<div class="rot"><h1>가로로 돌려주세요</h1><p>이 게임은 폰을 가로로 두고 해요.</p></div>
+
 <script>
 (()=>{
 var cloudDirty=0;
@@ -1049,9 +1077,9 @@ let fxq=load('fxq','auto'),netv=load('netv',false);
 function applyLite(on){S.lite=!!on;try{if(on)Object.defineProperty(ctx,'shadowBlur',{configurable:true,get(){return 0},set(){}});else delete ctx.shadowBlur}catch(e){}}
 function openSettings(){const opt=[['auto','자동','폰 속도에 맞춰 알아서'],['high','화려하게','빛 효과 모두 켜기'],['lite','가볍게','버벅일 때 추천']];
   modal(`<div class="mbox"><h2>설정</h2><p class="lab">효과 품질</p><div class="seg3">${opt.map(([k,n,d])=>`<button class="pk${fxq===k?' sel':''}" data-q="${k}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
-  <button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button><button class="b" id="smv">정보 옮기기 (코드)</button>${isAdmin()?'<button class="b" id="sdev">개발자 모드</button>':''}${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
+  <button class="b" id="sbgm">음악 · ${MUS.on?'켜짐':'꺼짐'}</button><button class="b" id="snet">통신 상태 보기 · ${netv?'켜짐':'꺼짐'}</button><button class="b" id="sfull">전체 화면으로 보기</button><button class="b" id="smv">정보 옮기기 (코드)</button>${isAdmin()?'<button class="b" id="sdev">개발자 모드</button>':''}${CL.user&&SP==='gs_'?`<p class="imc2">서버 저장: ${CL.last||'아직 안 함'}</p><button class="b" id="ssv">지금 저장하기</button><button class="b" id="slo">로그아웃 · ${CL.user.displayName||USER.nickname}</button>`:''}<button class="b main" id="sx">닫기</button></div>`);
   $('md').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{fxq=b.dataset.q;save('fxq',fxq);applyLite(fxq==='lite');openSettings()});
-  $('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const dv=$('sdev');if(dv)dv.onclick=openCheat;$('smv').onclick=openMove;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
+  $('sbgm').onclick=()=>{MUS.set(!MUS.on);openSettings()};$('snet').onclick=()=>{netv=!netv;save('netv',netv);openSettings()};$('sfull').onclick=full;$('sx').onclick=closeModal;const lo=$('slo');if(lo)lo.onclick=cloudLogout;const dv=$('sdev');if(dv)dv.onclick=openCheat;$('smv').onclick=openMove;const sv=$('ssv');if(sv)sv.onclick=async()=>{sv.textContent='저장 중…';sv.disabled=true;await cloudPush();openSettings()}}
 
 // ===== 개발자 치트 =====
 // 개발자 모드: 관리자 닉네임으로 로그인했을 때만 설정 창에 버튼이 생김
@@ -1897,14 +1925,18 @@ function showOver(){
     re.onclick=()=>{if(S.mode==='host'){ov.dataset.over='';S.recDone=0;hostAsk()}else{ov.dataset.over='';S.recDone=0;startMatch()}}}
   rewardFx(RW);$('mn').onclick=()=>{ov.dataset.over='';S.recDone=0;menu()};
 }
-const canFull=()=>{const d=document.documentElement;return !!(d.requestFullscreen||d.webkitRequestFullscreen)};
-function fullGuide(){modal(`<div class="mbox"><h2>아이폰 전체 화면</h2><div class="fg"><p><b>1</b>아래쪽 <span class="shr">공유 ⬆</span> 버튼</p><p><b>2</b><span class="shr">홈 화면에 추가</span></p><p><b>3</b>홈 화면의 아이콘으로 실행</p></div><button class="b main" id="fgx">확인</button></div>`);$('fgx').onclick=closeModal}
+const WRP=(()=>{try{return window.top!==window&&parent.__wrapFull?parent:null}catch(e){return null}})();
+const canFull=()=>{if(WRP)return WRP.__wrapCanFull();const d=document.documentElement;return !!(d.requestFullscreen||d.webkitRequestFullscreen)};
+function fullGuide(){const ua=navigator.userAgent,inApp=/KAKAOTALK|Instagram|NAVER|FBAN|FBAV|Line\/|everytimeApp|DaumApps/i.test(ua),crios=/CriOS|FxiOS|EdgiOS|Whale/i.test(ua);
+  const steps=inApp?`<p><b>1</b>지금은 앱 안의 브라우저예요. 오른쪽 위나 아래의 <span class="shr">⋮ 또는 ⋯</span> 버튼</p><p><b>2</b><span class="shr">Safari로 열기</span> (또는 다른 브라우저로 열기)</p><p><b>3</b>Safari에서 시작 화면의 <span class="shr">전체 화면</span>을 다시 눌러 주세요</p>`
+   :`<p><b>1</b>${crios?'주소창 오른쪽의':'아래쪽 가운데'} <span class="shr">공유 ⬆</span> 버튼</p><p><b>2</b>아래로 내려서 <span class="shr">홈 화면에 추가</span> → <span class="shr">웹 앱으로 열기</span> 켜기 → <span class="shr">추가</span></p><p><b>3</b>홈 화면에 생긴 <span class="shr">궁신결투</span> 아이콘으로 실행</p><p><b>4</b>처음 한 번은 <span class="shr">이어서 하기</span>로 로그인 (정보 그대로 나와요)</p>`;
+  modal(`<div class="mbox"><h2>아이폰 전체 화면</h2><p class="imc2">아이폰은 인터넷 창에서 전체 화면이 안 돼요. 홈 화면에 추가하면 앱처럼 꽉 찬 화면으로 할 수 있어요.</p><div class="fg">${steps}</div><button class="b main" id="fgx">확인</button></div>`);$('fgx').onclick=closeModal}
 function startScreen(){S.phase='menu';hidePlay();showTop(false);ov.hidden=false;const gst=SP==='gsg_';
   ov.className='ov title stsc';ov.innerHTML=`<div class="box stb">${LOGO}<div class="stbt"><button class="b main stgo" id="sgo">${gst?'내 계정으로 시작':'시작하기'}</button>
     ${navigator.standalone?'':`<button class="b stfs" id="sfs">전체 화면</button>`}<button class="stgu" id="sgu">${gst?'게스트로 계속하기':'게스트로 하기'}</button></div></div>`;
   const go=m=>{try{sessionStorage.setItem('gs_mode',m)}catch(e){}if((m==='guest')!==gst){try{sessionStorage.setItem('gs_auto','1')}catch(e){}location.reload()}else enterMain()};
   $('sgo').onclick=()=>go('main');$('sgu').onclick=()=>go('guest');const f=$('sfs');if(f)f.onclick=()=>{if(canFull())full();else fullGuide()}}
-function full(){const d=document.documentElement;if(!canFull()){fullGuide();return}try{const r=(d.requestFullscreen||d.webkitRequestFullscreen).call(d);r&&r.then&&r.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}catch(e){}}
+function full(){const d=document.documentElement;if(!canFull()){fullGuide();return}if(WRP){WRP.__wrapFull();return}try{const r=(d.requestFullscreen||d.webkitRequestFullscreen).call(d);r&&r.then&&r.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}catch(e){}}
 
 // ===================== 조작 =====================
 let myDir=0;const held=[];
@@ -1952,7 +1984,16 @@ document.addEventListener('contextmenu',e=>e.preventDefault());
 
 // ===================== 그리기 =====================
 let view={s:1,ox:0},bgC=null;
-function resize(){const d=Math.min(2,devicePixelRatio||1);cv.width=innerWidth*d|0;cv.height=innerHeight*d|0;const s=Math.min(cv.width/W,cv.height/H);view={s,ox:(cv.width-W*s)/2};buildBg()}
+// ===== 로비 자동 맞춤: 화면이 작아도(주소창이 있어도) 버튼·퀘스트·카드 줄이 서로 겹치지 않게 =====
+function fitLobby(){const lb=ov.querySelector('.lobby');if(!lb||ov.hidden)return;const m=lb.querySelector('.lmenu'),q=lb.querySelector('.lq'),d=lb.querySelector('.ldeck'),a=lb.querySelector('.lact');if(!m||!q||!d||!a)return;
+  m.classList.remove('g2');m.style.transform='';d.style.transform='';d.style.left='';
+  let mr=m.getBoundingClientRect(),qr=q.getBoundingClientRect();
+  if(mr.bottom>qr.top-8){m.classList.add('g2');mr=m.getBoundingClientRect()} // 세로 공간이 부족하면 2줄 × 2칸으로
+  if(mr.bottom>qr.top-8){const sc=Math.max(.6,(qr.top-8-mr.top)/mr.height);m.style.transformOrigin='top left';m.style.transform=`scale(${sc})`}
+  const ar=a.getBoundingClientRect(),dr=d.getBoundingClientRect(),L=qr.right+8,Rt=ar.left-8,av=Rt-L,sc=Math.min(1,av/dr.width);
+  if(dr.left<L||dr.right>Rt){d.style.transformOrigin='left bottom';d.style.left=(L+(av-dr.width*sc)/2)+'px';d.style.transform=`scale(${sc})`}}
+new MutationObserver(()=>requestAnimationFrame(fitLobby)).observe(ov,{childList:true});
+function resize(){requestAnimationFrame(fitLobby);const d=Math.min(2,devicePixelRatio||1);cv.width=innerWidth*d|0;cv.height=innerHeight*d|0;const s=Math.min(cv.width/W,cv.height/H);view={s,ox:(cv.width-W*s)/2};buildBg()}
 addEventListener('resize',resize);
 const X=x=>S.me===1?W-x:x;
 // 정적인 배경은 한 번만 그려 둠 (부드럽게)
@@ -2499,6 +2540,74 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
+
+
+// ===================== 배경 음악 (파일 없이 코드로 연주 · 매번 새로 만들어서 반복이 거의 없음) =====================
+const MUS=(()=>{let ctx=null,mst=null,rev=null,on=load('bgm',true),mode='',timer=0,nt=0,step=0,song=null,noiseBuf=null;
+  const R=a=>a[Math.floor(Math.random()*a.length)],ch=p=>Math.random()<p;
+  const hz=m=>440*Math.pow(2,(m-69)/12);
+  function init(){if(ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();
+    mst=ctx.createGain();mst.gain.value=on?.55:0;const comp=ctx.createDynamicsCompressor();mst.connect(comp);comp.connect(ctx.destination);
+    // 울림(리버브): 짧은 잡음으로 만든 공간감
+    rev=ctx.createConvolver();const L=ctx.sampleRate*1.8,b=ctx.createBuffer(2,L,ctx.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<L;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/L,3)}rev.buffer=b;
+    const rg=ctx.createGain();rg.gain.value=.28;rev.connect(rg);rg.connect(mst);
+    noiseBuf=ctx.createBuffer(1,ctx.sampleRate*.5,ctx.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1}
+  function out(g,wet){g.connect(mst);if(wet&&rev){const s=ctx.createGain();s.gain.value=wet;g.connect(s);s.connect(rev)}}
+  // ----- 악기 -----
+  function pluck(t,m,v,len,wet){const o=ctx.createOscillator(),o2=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+    o.type='sawtooth';o2.type='triangle';o.frequency.value=hz(m);o2.frequency.value=hz(m)*1.003;f.type='lowpass';f.frequency.setValueAtTime(3200,t);f.frequency.exponentialRampToValueAtTime(500,t+len);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.005);g.gain.exponentialRampToValueAtTime(.0008,t+len);
+    o.connect(f);o2.connect(f);f.connect(g);out(g,wet);o.start(t);o2.start(t);o.stop(t+len+.05);o2.stop(t+len+.05)}
+  function pad(t,ms,v,len){const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=900;f.Q.value=.5;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+len*.35);g.gain.linearRampToValueAtTime(0,t+len);f.connect(g);out(g,.6);
+    ms.forEach(m=>[-.07,.07].forEach(dt=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=hz(m);o.detune.value=dt*100;o.connect(f);o.start(t);o.stop(t+len+.05)}))}
+  function bass(t,m,v,len){const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();o.type='triangle';o.frequency.value=hz(m);f.type='lowpass';f.frequency.value=380;
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+len);o.connect(f);f.connect(g);out(g,0);o.start(t);o.stop(t+len+.05)}
+  function taiko(t,v,low){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(low?110:160,t);o.frequency.exponentialRampToValueAtTime(low?42:70,t+.35);
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(g);out(g,.25);o.start(t);o.stop(t+.65);
+    const n=ctx.createBufferSource(),ng=ctx.createGain(),nf=ctx.createBiquadFilter();n.buffer=noiseBuf;nf.type='lowpass';nf.frequency.value=700;ng.gain.setValueAtTime(v*.5,t);ng.gain.exponentialRampToValueAtTime(.001,t+.12);n.connect(nf);nf.connect(ng);out(ng,.2);n.start(t);n.stop(t+.15)}
+  function tick(t,v,hi){const n=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();n.buffer=noiseBuf;f.type='bandpass';f.frequency.value=hi?7000:2600;f.Q.value=hi?3:1.2;
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+(hi?.04:.12));n.connect(f);f.connect(g);out(g,.15);n.start(t);n.stop(t+.15)}
+  // ----- 곡 만들기: 조·속도·화음 진행·리듬을 무작위로 골라 8마디씩 계속 바꿈 -----
+  const SC={minor:[0,2,3,5,7,8,10],harm:[0,2,3,5,7,8,11],dor:[0,2,3,5,7,9,10],phr:[0,1,3,5,7,8,10]};
+  const PROG=[[0,5,3,4],[0,3,4,0],[0,6,5,4],[0,5,6,4],[0,2,3,4],[0,3,5,4],[0,4,5,3],[0,6,3,4]];
+  const DR_B=[ // 대전용 북 리듬 (16칸 = 1마디)
+    {k:[0,6,8,11],s:[4,12],h:[0,2,4,6,8,10,12,14]},{k:[0,3,8,10],s:[4,12,15],h:[2,6,10,14]},
+    {k:[0,7,8,14],s:[4,12],h:[0,1,2,4,6,8,9,10,12,14]},{k:[0,8],s:[4,10,12],h:[0,2,4,6,8,10,12,14]},{k:[0,2,8,9,11],s:[4,12],h:[2,6,10,14]}];
+  const DR_L=[{k:[0],s:[],h:[8]},{k:[0,10],s:[],h:[4,12]},{k:[0],s:[12],h:[]},{k:[],s:[],h:[]}];
+  function newSong(m){const b=m==='battle';return {m,root:b?R([50,52,48,53]):R([45,47,50,43]),sc:SC[b?R(['minor','harm','phr','harm']):R(['dor','minor','dor'])],
+    bpm:b?R([126,132,138,144]):R([84,90,96]),bar:0,sec:0,secLen:8,prog:R(PROG),dr:b?R(DR_B):R(DR_L),motif:null,dens:b?.6:.35,layers:{}}}
+  function newSection(){const s=song,b=s.m==='battle';s.sec++;s.bar=0;s.secLen=R([8,8,16]);s.prog=R(PROG);
+    if(ch(.35))s.root+=R([-2,2,3,-3,5,-5]);if(s.root>55)s.root-=12;if(s.root<40)s.root+=12;  // 가끔 조 바꾸기
+    if(ch(.3))s.sc=SC[b?R(['minor','harm','phr']):R(['dor','minor'])];
+    s.dr=b?R(DR_B):R(DR_L);s.dens=b?.45+Math.random()*.4:.2+Math.random()*.35;s.motif=null;
+    const r=Math.random();s.layers=b?{drum:r>.12,mel:r>.25||r<.12,pad:ch(.7),arp:ch(.55),bass:r>.12}:{drum:ch(.6),mel:ch(.75),pad:true,arp:ch(.5),bass:ch(.7)}; // 쉬어 가는 구간도 섞음
+    if(b&&ch(.15))s.bpm=Math.max(120,Math.min(150,s.bpm+R([-6,6])))}
+  const deg=(d,o)=>{const sc=song.sc,n=sc.length,q=Math.floor(d/n),r=((d%n)+n)%n;return song.root+sc[r]+12*(q+(o||0))};
+  function mkMotif(){const L=[],len=16;let d=R([0,2,4,7]);for(let i=0;i<len;i++){if(ch(song.dens)){d+=R([-2,-1,-1,1,1,2,0,3,-3]);d=Math.max(-1,Math.min(11,d));L.push(d)}else L.push(null)}return L}
+  function playStep(t,sp){const s=song,b=s.m==='battle',st=step%16,chd=s.prog[Math.floor(s.bar/2)%s.prog.length],ly=s.layers;
+    if(st===0){if(s.bar>=s.secLen)newSection();
+      if(ly.pad&&s.bar%2===0)pad(t,[deg(chd,1),deg(chd+2,1),deg(chd+4,1)],b?.022:.03,sp*32)}
+    if(ly.bass&&(b?st%4===0||(st%8===6&&ch(.5)):st%8===0))bass(t,deg(chd,-1)+(b&&st===8&&ch(.3)?12:0),b?.32:.24,sp*(b?3:7));
+    if(ly.drum){const d=s.dr;if(d.k.includes(st))taiko(t,b?.55:.38,true);if(d.s.includes(st))taiko(t,b?.32:.2,false);if(d.h.includes(st))tick(t,(st%4===0?.09:.05)*(b?1:.6),true);
+      if(b&&s.bar%s.secLen===s.secLen-1&&st>=12)taiko(t,.25+.1*(st-12),st%2===0)} // 구간 끝 북 채우기
+    if(ly.arp&&(b?st%2===0:st%4===0)){const a=[0,2,4,7,4,2][(step/(b?2:4)|0)%6];pluck(t,deg(chd+a,1),b?.06:.05,sp*(b?2.5:5),.35)}
+    if(ly.mel){if(!s.motif||(st===0&&s.bar%4===0&&ch(.5)))s.motif=mkMotif();let d=s.motif[st];
+      if(d!=null){if(s.bar%4===3&&ch(.4))d+=R([-1,1,2]);pluck(t,deg(d+chd,b?1:1),b?.1:.085,sp*(b?3:6),.45)}}
+    if(st===15)s.bar++}
+  function sched(){if(!ctx||!song)return;const sp=60/song.bpm/4;while(nt<ctx.currentTime+.25){playStep(nt,sp);nt+=sp;step++}}
+  function play(m){if(m===mode)return;mode=m;init();if(!ctx)return;clearInterval(timer);timer=0;
+    if(m==='lobby'||m==='battle'){song=newSong(m);newSection();song.bar=0;step=0;nt=ctx.currentTime+.08;timer=setInterval(sched,60)}
+    else if(m==='win'||m==='lose'||m==='draw'){song=null;const t=ctx.currentTime+.05,r=m==='win'?50:45,sc=m==='win'?[0,4,7,12,16,19,24]:m==='lose'?[12,10,7,3,0]:[0,7,5,7];
+      sc.forEach((x,i)=>pluck(t+i*(m==='win'?.11:.22),r+x+12,.12,m==='win'?1.2:1.6,.5));pad(t,m==='win'?[r+12,r+16,r+19]:[r+12,r+15,r+19],.05,2.6);taiko(t,.5,true);if(m==='win')taiko(t+.66,.4,true)}}
+  function set(v){on=v;save('bgm',v);if(mst)mst.gain.setTargetAtTime(v?.55:0,ctx.currentTime,.1)}
+  // 화면을 처음 누를 때 소리를 켬 (폰은 누르기 전엔 소리를 못 냄)
+  const unlock=()=>{init();if(ctx&&ctx.state==='suspended')ctx.resume()};['pointerdown','touchend','keydown'].forEach(e=>addEventListener(e,unlock,{passive:true}));
+  document.addEventListener('visibilitychange',()=>{if(!ctx)return;if(document.hidden)ctx.suspend();else ctx.resume()});
+  // 게임 상태를 보고 알아서 곡을 바꿈
+  setInterval(()=>{const ph=S.phase;if(ph==='menu')play('lobby');else if(ph==='count'||ph==='play')play('battle');
+    else if(ph==='over'&&mode==='battle'){play(S.win===2?'draw':S.win===S.me?'win':'lose')}},400);
+  return {set,get on(){return on}}})();
 
 // ===================== 로그인 · 서버 저장 (Firebase · 닉네임 + 숫자 4자리) =====================
 const FBC={apiKey:"AIzaSyBhKsybYzz0d3mBrNMwatPI0sjgQgn11tU",authDomain:"gungsin-duel.firebaseapp.com",projectId:"gungsin-duel",storageBucket:"gungsin-duel.firebasestorage.app",messagingSenderId:"203196099141",appId:"1:203196099141:web:9282e95e1602d1e967912c",databaseURL:"https://gungsin-duel-default-rtdb.asia-southeast1.firebasedatabase.app"};
